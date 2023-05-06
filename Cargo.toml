@@ -8,8 +8,11 @@ description = "Validator for the sockets project of CS230."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Parse command-line input.
 clap = { version = "4.2.4", features = ["derive"] }
+# Provides randomization services.
 rand = "0.8.5"
+# Provides futures.
 futures = "0.3.28"
+# Provides green threads.
 tokio = { version = "1.28.0", features = ["full"] }
-rayon = "1.7.0"

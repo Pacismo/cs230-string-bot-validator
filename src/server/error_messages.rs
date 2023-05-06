@@ -1,20 +1,30 @@
 use std::{error, fmt::Display, io, net::SocketAddr};
 use tokio::task::JoinError;
 
+/// Represents a message that can be sent to the caller.
+/// It can also be used as an error.
 #[derive(Debug)]
 pub enum Message {
+    /// Non-error. The client connected to the server.
     ClientConnection(SocketAddr),
+    /// Non-error. The client successfully completed the task.
     ClientSuccess(SocketAddr),
+    /// Error: the server failed to bind to a socket.
     ServerConnectionError(String),
+    /// Client error: the client sent an erroneous packet.
     ClientError(String),
+    /// Client failure: the client sent the wrong output.
     ClientFailureError {
         error_message: String,
         cipher: String,
         message: String,
         expected: String,
     },
+    /// Future joining error: a future could not be completed.
     FutureJoinError(String),
+    /// IO Error: an IO operation failed.
     IOError(io::Error),
+    /// General error: contains a boxed error.
     Error(Box<dyn error::Error + Send>),
 }
 

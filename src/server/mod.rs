@@ -12,6 +12,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
+/// Represents information about how to run the test.
 #[derive(Clone, Debug)]
 pub struct TestParams {
     pub message_count: usize,
@@ -20,12 +21,15 @@ pub struct TestParams {
     pub expected_email: Option<String>,
 }
 
+/// The meat of the server.
+/// Handles connections and errors.
 async fn server_main(
     tx: Sender<Message>,
     listener: TcpListener,
     params: TestParams,
 ) -> Result<(), Message> {
     if params.stop_at_first {
+        // Quit at the first client completion.
         match listener.accept() {
             Ok(cx) => handle_connection(
                 cx,
@@ -38,12 +42,17 @@ async fn server_main(
             Err(e) => Err(Message::ServerConnectionError(e.to_string())),
         }
     } else {
+        // A list of handles. Handles are run asynchronymously to the server.
+        // Yields at the end of every loop.
         let mut handles = vec![];
+
+        // The listener shouldn't block this thread.
         listener.set_nonblocking(true)?;
         loop {
             'incoming_loop: loop {
                 match listener.accept() {
                     Ok(cx) => {
+                        // Tell the main thread that a client has connected to the server.
                         tx.send(Message::ClientConnection(cx.1.clone()))
                             .expect("Receiver end is disconnected");
 
@@ -56,6 +65,7 @@ async fn server_main(
                     }
                     Err(e) => {
                         if e.kind() != ErrorKind::WouldBlock {
+                            // Tell the main thread that an error was encountered.
                             handles.into_iter().for_each(|h| h.abort());
                             return Err(Message::ServerConnectionError(
                                 "Error encountered during listener loop".into(),
@@ -67,6 +77,7 @@ async fn server_main(
                 }
             }
 
+            // Search for and join green threads that have finished handling their connections.
             for (message, index) in handles
                 .iter_mut()
                 .zip(0..)
@@ -83,6 +94,7 @@ async fn server_main(
                 handles.remove(index);
             }
 
+            // Yield this thread.
             tokio::task::yield_now().await;
         }
     }
